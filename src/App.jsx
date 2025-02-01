@@ -1,70 +1,82 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState  } from "react";
+import { useForm } from 'react-hook-form';
 import axios from "axios";
 import "./assets/style.css";
 
 const API_BASE = "https://ec-course-api.hexschool.io/v2";
 
+
 // 請自行替換 API_PATH
-const API_PATH = "react-test";
+const API_PATH = "react-test"
 
- const LoginInput = ({handleSubmit , LoginData , handleInputChange}) => {
-  return(<div className="container login">
-    <div className="row justify-content-center">
-      <h1 className="h3 mb-3 font-weight-normal">請先登入</h1>
-      <div className="col-8">
-        <form id="form" className="form-signin" onSubmit={handleSubmit}>
-          <div className="form-floating mb-3">
-            <input
-              type="email"
-              className="form-control"
-              id="username"
-              placeholder="name@example.com"
-              value={LoginData.username}
-              onChange={handleInputChange}
-              required
-              autoFocus
-            />
-            <label htmlFor="username">Email address</label>
-          </div>
-          <div className="form-floating">
-            <input
-              type="password"
-              className="form-control"
-              id="password"
-              placeholder="Password"
-              value={LoginData.password}
-              onChange={handleInputChange}
-              required
-            />
-            <label htmlFor="password">Password</label>
-          </div>
-          <button
-            className="btn btn-lg btn-primary w-100 mt-3"
-            type="submit"
-          >
-            登入
-          </button>
-        </form>
-      </div>
-    </div>
-    <p className="mt-5 mb-3 text-muted">&copy; 2024~∞ - 六角學院</p>
-  </div>
-  )
- }
+function App() {
 
- const ProductList = ({checkLogin,tempProduct,products, setTempProduct}) => {
-  return(<div className="container">
+  const [isAuth, setIsAuth] = useState(false);
+  const [products, setProducts] = useState([]);
+  const [tempProduct, setTempProduct] = useState(null);
 
+  const getProductData = async() => {
+    try{
+      const response = await axios.get(`${API_BASE}/api/${API_PATH}/admin/products`)
+      setProducts(response.data.products)
+    }catch(error){
+      console.log(error);
+    }
+  }
+  
+  
+
+  async function checkLogin (e){
+    try {
+      const token = document.cookie
+        .split("; ")
+        .find((row) => row.startsWith("hexToken="))
+        ?.split("=")[1];
+      console.log(token);
+      axios.defaults.headers.common.Authorization = token;
+
+      const res = await axios.post(`${API_BASE}/api/user/check`);
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
+  const {
+    register,
+    handleSubmit,
+    watch,
+    control,
+    formState: { errors },
+  } = useForm({
+    defaultValues: {
+      username:"g199703075@gmail.com",
+      password:"tp654jobbcox"
+    },
+  });
+
+  
+
+  const onSubmit = async(data) =>{
+    try{
+      const response = await axios.post(`${API_BASE}/admin/signin`,data)
+      alert('登入成功')
+      const { token, expired } = response.data;
+      document.cookie = `hexToken=${token};expires=${new Date(expired)};`;
+      axios.defaults.headers.common.Authorization = `${token}`;
+      getProductData()
+      setIsAuth(true)
+    }catch(error){
+      console.log(error);
+    }
+  }
+  
+
+  return (
+    <>
+      {isAuth ? (
+        <div className="container">
           <div className="row mt-5">
             <div className="col-md-6">
-              <button
-                className="btn btn-danger mb-5"
-                type="button"
-                id="check"
-                onClick={checkLogin}
-              >
-                確認是否登入
-              </button>
               <h2>產品列表</h2>
               <table className="table">
                 <thead>
@@ -146,81 +158,67 @@ const API_PATH = "react-test";
               )}
             </div>
           </div>
-
-  </div>)
-}
-
-function App() {
-  const [LoginData, setLoginData ] =  useState({
-    username : "",
-    password : ""
-  });
-  const [isAuth, setIsAuth ] =  useState(false);
-  const [products , setProducts] = useState([]);
-  const [tempProduct , setTempProduct] = useState(null);
-    
-  const handleInputChange = (e) => {
-    const { id, value } = e.target
-    setLoginData((preData)=>(
-      {...preData , [id]:value}
-    ))
-  }
-
-
-
-  async function checkLogin (e){
-    try {
-      const token = document.cookie
-        .split("; ")
-        .find((row) => row.startsWith("hexToken="))
-        ?.split("=")[1];
-      console.log(token);
-      axios.defaults.headers.common.Authorization = token;
-
-      const res = await axios.post(`${API_BASE}/api/user/check`);
-      console.log(res);
-    } catch (error) {
-      console.error(error);
-    }
-  }
-
-  const getData = async () =>{
-    try{
-      const response = await axios.get(`${API_BASE}/api/${API_PATH}/admin/products`)
-      //console.log(response.data.products);
-      setProducts(response.data.products)
-      
-    }catch (error){
-      console.log(error);
-    }
-  }
-  const handleSubmit = async (e) =>{
-    e.preventDefault();
-    try {
-      const response = await axios.post(`${API_BASE}/admin/signin`,LoginData)
-      const { token, expired } = response.data;
-      document.cookie = `hexToken=${token};expires=${new Date(expired)};`;
-      axios.defaults.headers.common.Authorization = `${token}`;
-    
-      getData();
-      
-      setIsAuth(true)
-
-    } catch (error) {
-      console.log(error);
-      alert('登入失敗, 請重新登入')
-    }
-  }
-
-  return (
-    <>
-      {isAuth ? (
-        <ProductList checkLogin={checkLogin} tempProduct={tempProduct} products={products} setTempProduct={setTempProduct} />
+        </div>
       ) : (
-        <LoginInput handleSubmit={handleSubmit} LoginData={LoginData} handleInputChange={handleInputChange}/>
+        <div className="container login">
+          <div className="row justify-content-center">
+            <h1 className="h3 mb-3 font-weight-normal">請先登入</h1>
+            <div className="col-8">
+              <form id="form" className="form-signin" onSubmit={handleSubmit(onSubmit)}>
+                <div className="form-floating mb-3">
+                  <input
+                    type="email"
+                    className= {`form-control ${errors.username && "is-invalid"}`}
+                    id="username"
+                    name='username'
+                    placeholder="name@example.com"
+                    {...register('username' ,
+                    {required:"請輸入Email address",
+                     pattern:{
+                      value: /^\S+@\S+$/i,
+                      message:"Email 不符合格式"
+                     } 
+                    })}
+                  />
+                  <label htmlFor="username">Email address</label>
+                  {errors.username && <div className="invalid-feedback text-start">{errors.username?.message}</div>}
+                </div>
+                <div className="form-floating">
+                  <input
+                    type="password"
+                    className={`form-control ${errors.password && "is-invalid"}`}
+                    id="password"
+                    name='password'
+                    placeholder="Password"
+                    {...register('password',{required:"請輸入password",
+                       minLength: {
+                        value:6,
+                        message:"必須大於6碼"
+                       }, 
+                       maxLength: {
+                        value:12,
+                        message:"必須小於12碼"
+                       }
+                     })}
+                  />
+                  <label htmlFor="password">Password</label>
+                  {errors.password && <div className="invalid-feedback text-start">{errors.password?.message}</div>}
+                </div>
+                <button
+                  className="btn btn-lg btn-primary w-100 mt-3"
+                  type="submit"
+                >
+                  登入
+                </button>
+              </form>
+            </div>
+          </div>
+          <p className="mt-5 mb-3 text-muted">&copy; 2024~∞ - 六角學院</p>
+        </div>
       )}
     </>
   );
 }
+
 
 export default App;
